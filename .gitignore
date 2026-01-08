@@ -1,0 +1,28 @@
+# Xcode
+ios/build/
+ios/DerivedData/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+ios/.DS_Store
+ios/Pods/
+ios/Podfile.lock
+
+# Firebase
+ios/GoogleService-Info.plist
+functions/.runtimeconfig.json
+functions/node_modules/
+functions/lib/
+
+# Environment
+.env
+.env.local
+
+# Claude
+.claude/settings.local.json
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
