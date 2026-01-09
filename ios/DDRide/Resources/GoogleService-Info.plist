@@ -2,44 +2,29 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!--
-	PLACEHOLDER FILE
-
-	Replace this file with your actual GoogleService-Info.plist from Firebase Console:
-	1. Go to https://console.firebase.google.com/
-	2. Select your project
-	3. Go to Project Settings
-	4. Under "Your apps", select iOS app
-	5. Download GoogleService-Info.plist
-	6. Replace this file
-	-->
-	<key>CLIENT_ID</key>
-	<string>YOUR_CLIENT_ID_HERE</string>
-	<key>REVERSED_CLIENT_ID</key>
-	<string>YOUR_REVERSED_CLIENT_ID_HERE</string>
 	<key>API_KEY</key>
-	<string>YOUR_API_KEY_HERE</string>
+	<string>AIzaSyDm0jdaY_ykCj6ejqzjQkuI0uxLg5dnTdg</string>
 	<key>GCM_SENDER_ID</key>
-	<string>YOUR_GCM_SENDER_ID_HERE</string>
+	<string>115001258662</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.ddride.app</string>
 	<key>PROJECT_ID</key>
-	<string>YOUR_PROJECT_ID_HERE</string>
+	<string>ddride-didowu</string>
 	<key>STORAGE_BUCKET</key>
-	<string>YOUR_STORAGE_BUCKET_HERE</string>
+	<string>ddride-didowu.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_APPINVITE_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_GCM_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_SIGNIN_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>YOUR_GOOGLE_APP_ID_HERE</string>
+	<string>1:115001258662:ios:b62b53fd6a67f874883a67</string>
 </dict>
 </plist>

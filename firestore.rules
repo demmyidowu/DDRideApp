@@ -3,17 +3,149 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2026, 2, 7);
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isKSUEmail() {
+      return request.auth.token.email.matches('.*@ksu\\.edu$');
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function hasAccess() {
+      return isSignedIn() && isKSUEmail() && isEmailVerified();
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return hasAccess() && getUserData().role == 'admin';
+    }
+
+    function isSameChapter(chapterId) {
+      return hasAccess() && getUserData().chapterId == chapterId;
+    }
+
+    function isOwner(userId) {
+      return hasAccess() && request.auth.uid == userId;
+    }
+
+    // ========================================
+    // USERS COLLECTION
+    // ========================================
+
+    match /users/{userId} {
+      // Anyone signed in with verified KSU email can read users
+      allow read: if hasAccess();
+
+      // Users can create their own account (during signup)
+      allow create: if isSignedIn() &&
+                       isKSUEmail() &&
+                       isEmailVerified() &&
+                       request.auth.uid == userId &&
+                       request.resource.data.email == request.auth.token.email &&
+                       request.resource.data.isEmailVerified == true;
+
+      // Users can update their own profile OR admins can update anyone
+      allow update: if isOwner(userId) || isAdmin();
+
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+
+    // ========================================
+    // CHAPTERS COLLECTION
+    // ========================================
+
+    match /chapters/{chapterId} {
+      // All verified users can read chapters
+      allow read: if hasAccess();
+
+      // Only admins can create, update, or delete chapters
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ========================================
+    // EVENTS COLLECTION
+    // ========================================
+
+    match /events/{eventId} {
+      // All verified users can read events
+      allow read: if hasAccess();
+
+      // Only admins can create, update, or delete events
+      allow create, update, delete: if isAdmin();
+
+      // DD Assignments Subcollection
+      match /ddAssignments/{assignmentId} {
+        // Anyone can read DD assignments
+        allow read: if hasAccess();
+
+        // Admins can create/delete DD assignments
+        allow create, delete: if isAdmin();
+
+        // Admins OR the DD themselves can update their assignment
+        allow update: if isAdmin() || isOwner(assignmentId);
+      }
+    }
+
+    // ========================================
+    // RIDES COLLECTION
+    // ========================================
+
+    match /rides/{rideId} {
+      // All verified users can read rides
+      allow read: if hasAccess();
+
+      // Users can create a ride request for themselves
+      allow create: if hasAccess() &&
+                       request.auth.uid == request.resource.data.riderId;
+
+      // Riders, DDs, or admins can update rides
+      allow update: if hasAccess() &&
+                       (request.auth.uid == resource.data.riderId ||
+                        request.auth.uid == resource.data.ddId ||
+                        isAdmin());
+
+      // Only admins can delete rides (for cleanup)
+      allow delete: if isAdmin();
+    }
+
+    // ========================================
+    // ADMIN ALERTS COLLECTION
+    // ========================================
+
+    match /adminAlerts/{alertId} {
+      // Only admins from the same chapter can read alerts
+      allow read: if isAdmin() &&
+                     (resource == null || isSameChapter(resource.data.chapterId));
+
+      // Only admins from the same chapter can create alerts
+      allow create: if isAdmin() && isSameChapter(request.resource.data.chapterId);
+
+      // Only admins from the same chapter can update/delete alerts
+      allow update, delete: if isAdmin() && isSameChapter(resource.data.chapterId);
+    }
+
+    // ========================================
+    // YEAR TRANSITION LOGS COLLECTION
+    // ========================================
+
+    match /yearTransitionLogs/{logId} {
+      // Only admins can read logs
+      allow read: if isAdmin();
+
+      // Only Cloud Functions can write logs (no client-side writes allowed)
+      allow write: if false;
     }
   }
 }

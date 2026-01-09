@@ -7,24 +7,33 @@
 
 import Foundation
 
+// Stored as subcollection: events/{eventId}/ddAssignments/{userId}
 struct DDAssignment: Codable, Identifiable, Equatable {
-    let id: String
-    var ddId: String
+    var id: String // Same as userId
+    var userId: String
     var eventId: String
-    var chapterId: String
+    var photoURL: String? // DD's photo for rider identification
+    var carDescription: String? // e.g., "Blue Toyota Camry"
     var isActive: Bool
-    var startTime: Date
-    var endTime: Date
-    var assignedBy: String // User ID
+    var inactiveToggles: Int // Track how many times DD toggled inactive
+    var lastActiveTimestamp: Date?
+    var lastInactiveTimestamp: Date?
+    var totalRidesCompleted: Int
     var createdAt: Date
     var updatedAt: Date
-    var inactiveToggles: [InactiveToggle]
 
-    var activeRidesCount: Int?
-    var completedRidesCount: Int?
-}
-
-struct InactiveToggle: Codable, Equatable {
-    var toggledAt: Date
-    var reason: String?
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId
+        case eventId
+        case photoURL
+        case carDescription
+        case isActive
+        case inactiveToggles
+        case lastActiveTimestamp
+        case lastInactiveTimestamp
+        case totalRidesCompleted
+        case createdAt
+        case updatedAt
+    }
 }

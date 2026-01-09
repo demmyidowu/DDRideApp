@@ -86,7 +86,7 @@ class AuthService: ObservableObject {
                 email: email,
                 phoneNumber: phoneNumber,
                 chapterId: chapterId,
-                role: .rider, // Default role
+                role: .member, // Default role (was .rider, corrected to .member)
                 classYear: classYear,
                 isEmailVerified: false,
                 createdAt: Date(),
