@@ -30,23 +30,17 @@ struct AdminAlert: Codable, Identifiable, Equatable {
 }
 
 enum AlertType: String, Codable, CaseIterable {
-    case ddInactive = "dd_inactive"
-    case emergencyRequest = "emergency_request"
-    case yearTransition = "year_transition"
+    case ddInactiveToggle = "dd_inactive_toggle" // DD toggled inactive >5 times in 30 min
+    case ddProlongedInactive = "dd_prolonged_inactive" // DD inactive >15 min during shift
+    case emergencyRide = "emergency_ride" // Emergency button pressed
+    case systemError = "system_error" // System-level errors
 
     var displayName: String {
         switch self {
-        case .ddInactive: return "DD Inactive"
-        case .emergencyRequest: return "Emergency Request"
-        case .yearTransition: return "Year Transition"
-        }
-    }
-
-    var iconName: String {
-        switch self {
-        case .ddInactive: return "exclamationmark.triangle"
-        case .emergencyRequest: return "exclamationmark.circle.fill"
-        case .yearTransition: return "calendar"
+        case .ddInactiveToggle: return "DD Inactive Toggle"
+        case .ddProlongedInactive: return "DD Prolonged Inactive"
+        case .emergencyRide: return "Emergency Ride"
+        case .systemError: return "System Error"
         }
     }
 }

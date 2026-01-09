@@ -33,16 +33,25 @@ struct Event: Codable, Identifiable, Equatable {
         case updatedAt
         case createdBy
     }
+
+    /// Computed property to check if event is currently active
+    var isActive: Bool {
+        status == .active
+    }
 }
 
 enum EventStatus: String, Codable, CaseIterable {
+    case scheduled = "scheduled"
     case active = "active"
     case completed = "completed"
+    case cancelled = "cancelled"
 
     var displayName: String {
         switch self {
+        case .scheduled: return "Scheduled"
         case .active: return "Active"
         case .completed: return "Completed"
+        case .cancelled: return "Cancelled"
         }
     }
 }
