@@ -1,0 +1,7 @@
+{
+  "twilio": {
+    "sid": "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "token": "your_auth_token_here",
+    "number": "+15551234567"
+  }
+}

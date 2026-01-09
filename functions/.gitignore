@@ -8,3 +8,22 @@ typings/
 # Node.js dependency directory
 node_modules/
 *.local
+
+# Firebase runtime config (contains secrets)
+.runtimeconfig.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,32 +1,123 @@
 /**
- * Import function triggers from their respective submodules:
+ * Firebase Cloud Functions for DD Ride App
  *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
+ * This file exports all Cloud Functions for the DD Ride application.
+ * Functions are organized by responsibility:
  *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ * 1. Ride Management (rideAssignment.ts)
+ *    - autoAssignRide: Automatically assign rides to DDs with shortest wait time
+ *
+ * 2. SMS Notifications (smsNotifications.ts)
+ *    - notifyDDNewRide: Send SMS to DD when ride is assigned
+ *    - notifyRiderEnRoute: Send SMS to rider when DD is en route
+ *    - incrementDDRideCount: Update DD ride count on completion
+ *
+ * 3. Scheduled Tasks (yearTransition.ts)
+ *    - yearTransition: Annual class year transition (August 1st)
+ *
+ * 4. Activity Monitoring (ddMonitoring.ts)
+ *    - monitorDDActivity: Monitor DD inactive toggles and prolonged inactivity
+ *
+ * 5. Emergency Handling (emergencyHandler.ts)
+ *    - handleEmergencyRide: Process emergency ride requests
+ *    - monitorEmergencyRideStatus: Alert if emergency ride unassigned too long
+ *
+ * @see https://firebase.google.com/docs/functions
  */
 
-import {setGlobalOptions} from "firebase-functions";
-import {onRequest} from "firebase-functions/https";
-import * as logger from "firebase-functions/logger";
+import {setGlobalOptions} from "firebase-functions/v2";
 
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
+// Set global options for all functions
+setGlobalOptions({
+  maxInstances: 10, // Cost control
+  region: "us-central1", // Central US region for K-State
+});
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+// ============================================================================
+// RIDE MANAGEMENT
+// ============================================================================
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+/**
+ * Automatically assigns new rides to the DD with the shortest wait time
+ * Trigger: onCreate rides/{rideId}
+ */
+export {autoAssignRide} from "./rideAssignment";
+
+// ============================================================================
+// SMS NOTIFICATIONS
+// ============================================================================
+
+/**
+ * Sends SMS to DD when a new ride is assigned
+ * Trigger: onUpdate rides/{rideId} (queued -> assigned)
+ */
+export {notifyDDNewRide} from "./smsNotifications";
+
+/**
+ * Sends SMS to rider when DD marks en route
+ * Trigger: onUpdate rides/{rideId} (assigned -> enroute)
+ */
+export {notifyRiderEnRoute} from "./smsNotifications";
+
+/**
+ * Increments DD's totalRidesCompleted counter when ride is completed
+ * Trigger: onUpdate rides/{rideId} (any -> completed)
+ */
+export {incrementDDRideCount} from "./smsNotifications";
+
+// ============================================================================
+// SCHEDULED TASKS
+// ============================================================================
+
+/**
+ * Annual year transition function
+ * Schedule: August 1st at midnight (America/Chicago)
+ * Actions:
+ * - Removes all seniors (classYear === 4)
+ * - Advances all other members (classYear += 1)
+ * - Creates audit log
+ * - Notifies admins
+ */
+export {yearTransition} from "./yearTransition";
+
+// ============================================================================
+// ACTIVITY MONITORING
+// ============================================================================
+
+/**
+ * Monitors DD activity patterns and creates alerts
+ * Trigger: onUpdate events/{eventId}/ddAssignments/{ddId}
+ * Checks:
+ * - Excessive inactive toggles (>5)
+ * - Prolonged inactivity (>15 minutes)
+ * - Auto-resets toggle counter after 30 minutes
+ */
+export {monitorDDActivity} from "./ddMonitoring";
+
+// ============================================================================
+// EMERGENCY HANDLING
+// ============================================================================
+
+/**
+ * Handles emergency ride requests
+ * Trigger: onCreate rides/{rideId} where isEmergency === true
+ * Actions:
+ * - Sets priority to 9999
+ * - Creates admin alert
+ * - Notifies chapter admins (TODO: push notifications)
+ */
+export {handleEmergencyRide} from "./emergencyHandler";
+
+/**
+ * Monitors emergency ride assignment status
+ * Trigger: onCreate rides/{rideId} where isEmergency === true
+ * Waits 2 minutes, then alerts if still unassigned
+ */
+export {monitorEmergencyRideStatus} from "./emergencyHandler";
+
+// ============================================================================
+// UTILITY EXPORTS
+// ============================================================================
+
+// Export utility functions for testing purposes
+export * as validation from "./utils/validation";
