@@ -19,6 +19,10 @@ class FirestoreService: ObservableObject {
 
     // MARK: - Users
 
+    func createUser(_ user: User) async throws {
+        try db.collection("users").document(user.id).setData(from: user)
+    }
+
     func fetchUser(id: String) async throws -> User {
         let document = try await db.collection("users").document(id).getDocument()
         return try document.data(as: User.self)
