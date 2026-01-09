@@ -135,11 +135,24 @@ class RideRequestService: ObservableObject {
                 throw RideRequestError.geocodingFailed(error)
             }
 
-            // Step 4: Calculate initial priority (waitMinutes = 0 for new request)
+            // Step 3.5: Fetch event to determine chapter relationship
+            let event: Event
+            do {
+                event = try await firestoreService.fetchEvent(id: eventId)
+            } catch {
+                throw RideRequestError.invalidEventId
+            }
+
+            // Step 4: Determine if same chapter or cross-chapter
+            let isSameChapter = (user.chapterId == event.chapterId)
+
+            // Step 5: Calculate initial priority (waitMinutes = 0 for new request)
+            // Uses cross-chapter logic if rider is from different chapter than event
             let priority = queueService.calculatePriority(
                 classYear: user.classYear,
                 waitMinutes: 0.0,
-                isEmergency: isEmergency
+                isEmergency: isEmergency,
+                isSameChapter: isSameChapter
             )
 
             // Step 5: Create Ride object

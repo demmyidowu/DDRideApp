@@ -11,8 +11,10 @@ import Combine
 /// Service for managing ride queue operations and priority calculations
 ///
 /// This service implements the critical business logic for:
-/// - Priority calculation using the formula: (classYear × 10) + (waitMinutes × 0.5)
-/// - Emergency rides get priority 9999
+/// - Priority calculation with differentiation between same-chapter and cross-chapter rides
+/// - Same-chapter: (classYear × 10) + (waitMinutes × 0.5)
+/// - Cross-chapter: (waitMinutes × 0.5) only (class year doesn't matter)
+/// - Emergency rides get priority 9999 (regardless of chapter)
 /// - Overall queue position across all DDs (not per-DD)
 /// - Estimated wait time calculations
 ///
@@ -20,9 +22,13 @@ import Combine
 /// ```swift
 /// let service = RideQueueService.shared
 ///
-/// // Calculate priority for a ride
-/// let priority = service.calculatePriority(classYear: 4, waitMinutes: 5, isEmergency: false)
+/// // Calculate priority for same-chapter ride
+/// let priority1 = service.calculatePriority(classYear: 4, waitMinutes: 5, isEmergency: false, isSameChapter: true)
 /// // Result: (4 × 10) + (5 × 0.5) = 42.5
+///
+/// // Calculate priority for cross-chapter ride
+/// let priority2 = service.calculatePriority(classYear: 4, waitMinutes: 5, isEmergency: false, isSameChapter: false)
+/// // Result: 5 × 0.5 = 2.5 (class year ignored)
 ///
 /// // Get overall queue position
 /// let position = try await service.getOverallQueuePosition(rideId: "ride123", eventId: "event456")
@@ -45,35 +51,80 @@ class RideQueueService: ObservableObject {
 
     // MARK: - Priority Calculation
 
-    /// Calculate priority for a ride based on class year, wait time, and emergency status
+    /// Calculate priority for a ride based on class year, wait time, emergency status, and chapter relationship
     ///
-    /// Algorithm: (classYear × 10) + (waitMinutes × 0.5)
-    /// Emergency rides always get priority 9999
+    /// Algorithm:
+    /// - Emergency rides: always 9999 (regardless of chapter)
+    /// - Same-chapter rides: (classYear × 10) + (waitMinutes × 0.5)
+    /// - Cross-chapter rides: (waitMinutes × 0.5) only (class year doesn't matter)
+    ///
+    /// Rationale:
+    /// - Same-chapter: DDs know their own chapter's members and respect class year hierarchy
+    /// - Cross-chapter: DDs don't know other chapters' hierarchies, so only wait time matters
     ///
     /// Examples:
-    /// - Senior (4) waiting 5 min: (4×10) + (5×0.5) = 42.5
-    /// - Junior (3) waiting 10 min: (3×10) + (10×0.5) = 35.0
-    /// - Sophomore (2) waiting 20 min: (2×10) + (20×0.5) = 30.0
-    /// - Freshman (1) waiting 15 min: (1×10) + (15×0.5) = 17.5
+    /// - Same chapter - Senior (4) waiting 5 min: (4×10) + (5×0.5) = 42.5
+    /// - Same chapter - Junior (3) waiting 10 min: (3×10) + (10×0.5) = 35.0
+    /// - Same chapter - Sophomore (2) waiting 20 min: (2×10) + (20×0.5) = 30.0
+    /// - Same chapter - Freshman (1) waiting 15 min: (1×10) + (15×0.5) = 17.5
+    /// - Cross chapter - Senior (4) waiting 5 min: 5×0.5 = 2.5 (class year ignored)
+    /// - Cross chapter - Freshman (1) waiting 15 min: 15×0.5 = 7.5 (class year ignored)
     /// - Emergency (any): 9999
     ///
     /// - Parameters:
     ///   - classYear: Student's class year (1=freshman, 2=sophomore, 3=junior, 4=senior)
     ///   - waitMinutes: How many minutes the rider has been waiting
     ///   - isEmergency: Whether this is an emergency ride request
+    ///   - isSameChapter: Whether the rider is from the same chapter as the event's DDs
     /// - Returns: The calculated priority (higher = more priority)
-    func calculatePriority(classYear: Int, waitMinutes: Double, isEmergency: Bool) -> Double {
+    func calculatePriority(
+        classYear: Int,
+        waitMinutes: Double,
+        isEmergency: Bool,
+        isSameChapter: Bool
+    ) -> Double {
+        // Emergency always highest priority
         if isEmergency {
             return emergencyPriority
         }
 
+        // Cross-chapter: only wait time matters (DDs don't know other chapters' hierarchies)
+        if !isSameChapter {
+            return waitMinutes * waitTimeWeight
+        }
+
+        // Same chapter: class year + wait time
         let classYearPriority = Double(classYear) * classYearWeight
         let waitTimePriority = waitMinutes * waitTimeWeight
 
         return classYearPriority + waitTimePriority
     }
 
+    /// Determine if a ride is from the same chapter as the event's DDs
+    ///
+    /// Logic:
+    /// - If event allows all chapters (contains "ALL"), check if rider's chapter matches event's chapter
+    /// - Otherwise, check if rider's chapter matches event's chapter
+    ///
+    /// - Parameters:
+    ///   - ride: The ride to check
+    ///   - event: The event the ride is associated with
+    /// - Returns: True if same chapter, false if cross-chapter
+    func isSameChapterRide(ride: Ride, event: Event) -> Bool {
+        // If event allows all chapters, riders could be from different chapters
+        // Check if rider's chapter matches event's hosting chapter
+        if event.allowedChapterIds.contains("ALL") {
+            return ride.chapterId == event.chapterId
+        }
+
+        // If event is restricted to specific chapters, check if rider's chapter matches event's chapter
+        return ride.chapterId == event.chapterId
+    }
+
     /// Calculate priority for an existing ride based on current time
+    ///
+    /// Note: This is a simplified calculation that assumes same-chapter.
+    /// For accurate cross-chapter priority, use calculatePriorityForRide(ride:event:classYear:)
     ///
     /// - Parameter ride: The ride to calculate priority for
     /// - Returns: The calculated priority
@@ -82,7 +133,29 @@ class RideQueueService: ObservableObject {
         return calculatePriority(
             classYear: 0, // Will need to fetch user's classYear separately
             waitMinutes: waitMinutes,
-            isEmergency: ride.isEmergency
+            isEmergency: ride.isEmergency,
+            isSameChapter: true // Default to same chapter for backward compatibility
+        )
+    }
+
+    /// Calculate priority for a ride with full context
+    ///
+    /// This is the preferred method when you have access to the event and user information
+    ///
+    /// - Parameters:
+    ///   - ride: The ride to calculate priority for
+    ///   - event: The event the ride is associated with
+    ///   - classYear: The rider's class year
+    /// - Returns: The calculated priority
+    func calculatePriorityForRide(ride: Ride, event: Event, classYear: Int) -> Double {
+        let waitMinutes = Date().timeIntervalSince(ride.requestedAt) / 60.0
+        let isSameChapter = isSameChapterRide(ride: ride, event: event)
+
+        return calculatePriority(
+            classYear: classYear,
+            waitMinutes: waitMinutes,
+            isEmergency: ride.isEmergency,
+            isSameChapter: isSameChapter
         )
     }
 
@@ -91,13 +164,9 @@ class RideQueueService: ObservableObject {
     /// - Parameters:
     ///   - ride: The ride to update
     ///   - classYear: The rider's class year
-    func updateRidePriority(_ ride: inout Ride, classYear: Int) {
-        let waitMinutes = Date().timeIntervalSince(ride.requestedAt) / 60.0
-        ride.priority = calculatePriority(
-            classYear: classYear,
-            waitMinutes: waitMinutes,
-            isEmergency: ride.isEmergency
-        )
+    ///   - event: The event the ride is associated with
+    func updateRidePriority(_ ride: inout Ride, classYear: Int, event: Event) {
+        ride.priority = calculatePriorityForRide(ride: ride, event: event, classYear: classYear)
     }
 
     // MARK: - Queue Position
@@ -274,19 +343,22 @@ class RideQueueService: ObservableObject {
     /// Update priorities for all active rides in an event
     ///
     /// This should be called periodically (e.g., every minute) to update
-    /// priorities based on increasing wait times
+    /// priorities based on increasing wait times and cross-chapter logic
     ///
     /// - Parameter eventId: The event ID
     /// - Throws: FirestoreError if operation fails
     func updateAllPriorities(eventId: String) async throws {
         let rides = try await firestoreService.fetchActiveRides(eventId: eventId)
 
+        // Fetch event once for all rides
+        let event = try await firestoreService.fetchEvent(id: eventId)
+
         for ride in rides {
             // Fetch rider to get class year
             let rider = try await firestoreService.fetchUser(id: ride.riderId)
 
             var updatedRide = ride
-            updateRidePriority(&updatedRide, classYear: rider.classYear)
+            updateRidePriority(&updatedRide, classYear: rider.classYear, event: event)
 
             // Only update if priority changed
             if updatedRide.priority != ride.priority {
