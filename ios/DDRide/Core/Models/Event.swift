@@ -17,6 +17,7 @@ struct Event: Codable, Identifiable, Equatable {
     var location: String?
     var description: String?
     var createdAt: Date
+    var updatedAt: Date
     var createdBy: String // User ID
 
     enum CodingKeys: String, CodingKey {
@@ -29,6 +30,7 @@ struct Event: Codable, Identifiable, Equatable {
         case location
         case description
         case createdAt
+        case updatedAt
         case createdBy
     }
 }

@@ -39,6 +39,12 @@ class FirestoreService: ObservableObject {
         try db.collection("users").document(user.id).setData(from: updatedUser)
     }
 
+    func updateUserFCMToken(userId: String, token: String) async throws {
+        try await db.collection("users")
+            .document(userId)
+            .updateData(["fcmToken": token])
+    }
+
     func deleteUser(id: String) async throws {
         try await db.collection("users").document(id).delete()
     }

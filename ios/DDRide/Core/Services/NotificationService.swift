@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 import UserNotifications
 import FirebaseMessaging
 
@@ -22,7 +23,9 @@ class NotificationService: NSObject, ObservableObject {
         super.init()
         center.delegate = self
         Messaging.messaging().delegate = self
-        checkAuthorizationStatus()
+        Task {
+            await checkAuthorizationStatus()
+        }
     }
 
     func requestAuthorization() async throws {
@@ -107,10 +110,7 @@ extension NotificationService: MessagingDelegate {
         guard let userId = AuthService.shared.currentUser?.id else { return }
 
         do {
-            try await FirestoreService.shared.db
-                .collection("users")
-                .document(userId)
-                .updateData(["fcmToken": token])
+            try await FirestoreService.shared.updateUserFCMToken(userId: userId, token: token)
         } catch {
             print("Error updating FCM token: \(error.localizedDescription)")
         }
