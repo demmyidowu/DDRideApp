@@ -18,6 +18,7 @@ struct PrimaryButton: View {
     let title: String
     let action: () -> Void
     var isLoading: Bool = false
+    var isDisabled: Bool = false
     var style: ButtonStyleType = .primary
     var icon: String? = nil
 
@@ -66,13 +67,13 @@ struct PrimaryButton: View {
             .frame(maxWidth: .infinity)
             .frame(minHeight: 44)
             .padding()
-            .background(isLoading ? style.backgroundColor.opacity(0.6) : style.backgroundColor)
+            .background((isLoading || isDisabled) ? style.backgroundColor.opacity(0.6) : style.backgroundColor)
             .foregroundColor(style.foregroundColor)
             .cornerRadius(12)
         }
-        .disabled(isLoading)
+        .disabled(isLoading || isDisabled)
         .accessibilityLabel(isLoading ? "Loading" : title)
-        .accessibilityHint(isLoading ? "" : "Double tap to \(title.lowercased())")
+        .accessibilityHint(isLoading || isDisabled ? "" : "Double tap to \(title.lowercased())")
     }
 }
 
