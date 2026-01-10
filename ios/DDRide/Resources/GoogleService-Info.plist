@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.ddride.app</string>
+	<string>com.rallyride.app</string>
 	<key>PROJECT_ID</key>
 	<string>ddride-didowu</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:115001258662:ios:b62b53fd6a67f874883a67</string>
+	<string>1:115001258662:ios:f750a131088cfbe7883a67</string>
 </dict>
 </plist>

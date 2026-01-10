@@ -13,13 +13,23 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authService.isLoading {
-                LoadingView()
+                LoadingView(message: "Loading...")
+                    .transition(.opacity)
             } else if let user = authService.currentUser {
-                MainTabView(user: user)
+                if !user.isEmailVerified {
+                    EmailVerificationView()
+                        .transition(.opacity)
+                } else {
+                    MainTabView(user: user)
+                        .transition(.opacity)
+                }
             } else {
                 LoginView()
+                    .transition(.opacity)
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: authService.isLoading)
+        .animation(.easeInOut(duration: 0.3), value: authService.currentUser?.id)
     }
 }
 
